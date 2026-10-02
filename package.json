@@ -1,0 +1,9 @@
+{
+  "name": "yokdil-groq-vercel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "groq-sdk": "^0.37.0"
+  }
+}

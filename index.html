@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YÖKDİL Sosyal Bilimler AI Çalışma Asistanı</title>
+<style>
+:root{--bg:#07111f;--card:#0e1b2d;--line:#20334c;--text:#eef5ff;--muted:#9eb0c8;--accent:#55d6be;--accent2:#6ea8fe;--danger:#ff7b8a}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#06101c,#0a1728 55%,#07101c);color:var(--text);font-family:Inter,system-ui,Arial}
+.container{max-width:1200px;margin:auto;padding:24px}.hero{padding:30px 0 20px}.hero h1{font-size:clamp(28px,4vw,48px);margin:0 0 8px}.hero p{color:var(--muted);max-width:800px}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.badge{border:1px solid var(--line);background:#0b1829;padding:7px 10px;border-radius:999px;color:#c9d7ea;font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:850px){.grid{grid-template-columns:1fr}}
+.card{background:rgba(14,27,45,.92);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 12px 35px #0003}.card h2{margin-top:0;font-size:20px}
+button{border:0;border-radius:12px;padding:12px 16px;background:var(--accent);color:#05221c;font-weight:800;cursor:pointer}button.secondary{background:#17283e;color:#dce9fa;border:1px solid var(--line)}button:disabled{opacity:.5;cursor:wait}
+.controls{display:flex;gap:10px;flex-wrap:wrap}.status{margin-top:12px;color:var(--muted);font-size:13px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}.stat{background:#0a1728;border:1px solid var(--line);padding:12px;border-radius:12px;min-width:120px}.stat b{display:block;font-size:22px}
+.search{width:100%;background:#081423;border:1px solid var(--line);color:white;padding:12px;border-radius:10px;margin:10px 0 14px}
+.table{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:12px}.row{display:grid;grid-template-columns:44px 1fr 1fr 2fr;gap:8px;padding:10px;border-bottom:1px solid #172941;font-size:14px}.row.head{position:sticky;top:0;background:#12243a;font-weight:800}.row:nth-child(even){background:#0b1726}.en{font-weight:800}.tr{color:#b8cae2}.ex{color:#9db1ca}.tactic{border-left:4px solid var(--accent2);padding:14px;margin:10px 0;background:#0a1728;border-radius:10px}.source{color:#8fb4ff;font-size:12px;margin-top:6px}
+footer{color:#71849d;font-size:12px;padding:25px 0}
+.notice{background:#111f31;border:1px solid #29425f;border-radius:12px;padding:12px;color:#bfd0e4;font-size:13px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="container">
+<section class="hero">
+<h1>YÖKDİL Sosyal Bilimler AI Asistanı</h1>
+<p>Türkçe–İngilizce 1000 kelimelik çalışma havuzu, güncel sosyal bilimler kelimeleri ve internet taramasıyla yenilenen YÖKDİL taktikleri.</p>
+<div class="badges"><span class="badge">Groq AI</span><span class="badge">Vercel API</span><span class="badge">GitHub uyumlu</span><span class="badge">Web Search</span><span class="badge">Local progress</span></div>
+</section>
+
+<div class="notice">API anahtarını HTML içine koyma. <b>GROQ_API_KEY</b> Vercel Environment Variable olarak tutulur. Böylece tarayıcıya açılmaz.</div>
+
+<div class="grid">
+<section class="card">
+<h2>📚 1000 Kelimelik Sosyal Bilimler Havuzu</h2>
+<p class="status">Kelimeler 100'erli paketler halinde üretilir. Böylece tek istekte aşırı uzun yanıt alma riski azalır.</p>
+<div class="controls">
+<button id="generate">1000 Kelimeyi Oluştur / Yenile</button>
+<button class="secondary" id="clear">Temizle</button>
+</div>
+<div class="stats"><div class="stat"><b id="count">0</b>kelime</div><div class="stat"><b id="known">0</b>öğrenildi</div><div class="stat"><b id="left">1000</b>kalan</div></div>
+<input id="filter" class="search" placeholder="Kelime ara: policy, inequality, göç...">
+<div id="words" class="table"></div>
+</section>
+
+<section class="card">
+<h2>🌐 Güncel YÖKDİL Taktikleri</h2>
+<p class="status">Groq'un tarayıcı aramasıyla güncel web kaynaklarını tarar; tarih ve kaynakları göstermeye çalışır.</p>
+<div class="controls"><button id="tactics">Güncel Taktikleri Getir</button></div>
+<div id="tacticsBox" style="margin-top:14px"><p class="status">Henüz tarama yapılmadı.</p></div>
+</section>
+</div>
+
+<section class="card" style="margin-top:16px">
+<h2>🧠 Sınav Odaklı Çalışma</h2>
+<div class="controls">
+<button class="secondary" id="daily">Bugünün 20 Kelimesini Seç</button>
+<button class="secondary" id="resetKnown">Öğrenilenleri Sıfırla</button>
+</div>
+<div id="dailyBox" style="margin-top:14px"></div>
+</section>
+<footer>Bu sistem eğitim amaçlıdır. YÖKDİL sınavının resmi soru bankası değildir. Gerçek zamanlı web sonuçları model ve kaynakların erişimine bağlıdır.</footer>
+</div>
+
+<script>
+const state={words:JSON.parse(localStorage.getItem("yokdil_words")||"[]"),known:new Set(JSON.parse(localStorage.getItem("yokdil_known")||"[]"))};
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("yokdil_words",JSON.stringify(state.words));localStorage.setItem("yokdil_known",JSON.stringify([...state.known]));render();}
+function render(){
+ $("count").textContent=state.words.length;
+ $("known").textContent=state.known.size;
+ $("left").textContent=Math.max(0,1000-state.words.length);
+ const q=$("filter").value.toLowerCase().trim();
+ const arr=state.words.filter(x=>(x.en+" "+x.tr+" "+(x.example||"")).toLowerCase().includes(q));
+ $("words").innerHTML='<div class="row head"><div>#</div><div>English</div><div>Türkçe</div><div>Örnek / İpucu</div></div>'+
+ arr.map((x,i)=>`<div class="row"><div>${i+1}</div><div class="en">${esc(x.en)}<br><button class="secondary" style="padding:4px 7px;font-size:11px" onclick="toggleKnown('${escAttr(x.en)}')">${state.known.has(x.en)?"✓ Öğrenildi":"Öğrenildi"}</button></div><div class="tr">${esc(x.tr)}</div><div class="ex">${esc(x.example||"")}</div></div>`).join("");
+}
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function escAttr(s){return String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
+window.toggleKnown=(w)=>{state.known.has(w)?state.known.delete(w):state.known.add(w);save()};
+$("filter").oninput=render;
+$("clear").onclick=()=>{if(confirm("Kelime havuzu silinsin mi?")){state.words=[];state.known.clear();save()}};
+$("resetKnown").onclick=()=>{state.known.clear();save()};
+async function post(body){
+ const r=await fetch("/api/yokdil",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+ const data=await r.json(); if(!r.ok) throw new Error(data.error||"API hatası"); return data;
+}
+$("generate").onclick=async()=>{
+ $("generate").disabled=true;
+ try{
+   let existing=new Set(state.words.map(x=>x.en.toLowerCase()));
+   for(let batch=0;batch<10;batch++){
+     $("generate").textContent=`Üretiliyor: ${batch*100}/1000`;
+     const data=await post({action:"vocabulary",batch:batch+1,exclude:[...existing].slice(-300)});
+     for(const x of data.words||[]) if(x.en && !existing.has(x.en.toLowerCase()) && state.words.length<1000){state.words.push(x);existing.add(x.en.toLowerCase())}
+     save();
+   }
+   $("generate").textContent="1000 Kelimeyi Yenile";
+ }catch(e){alert(e.message);$("generate").textContent="Tekrar Dene"}
+ $("generate").disabled=false;
+};
+$("tactics").onclick=async()=>{
+ $("tactics").disabled=true;$("tacticsBox").innerHTML="<p class='status'>İnternet taranıyor ve YÖKDİL taktikleri çıkarılıyor...</p>";
+ try{
+   const data=await post({action:"tactics"});
+   $("tacticsBox").innerHTML=(data.tactics||[]).map(t=>`<div class="tactic"><b>${esc(t.title)}</b><p>${esc(t.detail)}</p><div class="source">${esc(t.source||"Web kaynağı")}</div></div>`).join("")+
+   `<div class="status">Güncelleme: ${new Date().toLocaleString("tr-TR")}</div>`;
+ }catch(e){$("tacticsBox").innerHTML="<p class='status'>"+esc(e.message)+"</p>"}
+ $("tactics").disabled=false;
+};
+$("daily").onclick=()=>{
+ const a=[...state.words].sort(()=>Math.random()-.5).slice(0,20);
+ $("dailyBox").innerHTML=a.map((x,i)=>`<div class="tactic"><b>${i+1}. ${esc(x.en)}</b> — ${esc(x.tr)}<br><span class="ex">${esc(x.example||"")}</span></div>`).join("");
+};
+render();
+</script>
+</body>
+</html>
